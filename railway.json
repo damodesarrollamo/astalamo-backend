@@ -1,0 +1,13 @@
+{
+  "$schema": "https://railway.app/railway.schema.json",
+  "build": {
+    "builder": "NIXPACKS",
+    "nixpacks": {
+      "pythonVersion": "3.13"
+    }
+  },
+  "deploy": {
+    "numInstances": 1,
+    "startCommand": "gunicorn app:app --bind 0.0.0.0:$PORT --workers 2"
+  }
+}
