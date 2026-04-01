@@ -1,9 +1,9 @@
-import anthropic
-import json
+import google.generativeai as genai
 import os
+import json
 
-ANTHROPIC_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
-MODEL = "claude-sonnet-4-20250514"
+genai.configure(api_key=os.environ.get("GEMINI_API_KEY", ""))
+model = genai.GenerativeModel("gemini-1.5-flash")
 
 SYSTEM_INDIVIDUAL = """Sos AstralReader, un intérprete de cartas natales astrológicas.
 Recibís el texto extraído de un PDF de carta natal generado por losarcanos.com.
@@ -52,36 +52,21 @@ Generá el análisis con este formato JSON exacto (cada campo es un string con 3
  "manual_de_la_pareja": "<consejos concretos para cultivar el vínculo>"
 }}"""
 
-client = anthropic.Anthropic(api_key=ANTHROPIC_KEY)
 
 def interpretar_individual(texto_pdf: str, consultante: str) -> dict:
-    response = client.messages.create(
-        model=MODEL,
-        max_tokens=4000,
-        system=SYSTEM_INDIVIDUAL,
-        messages=[{"role": "user", "content": USER_INDIVIDUAL.format(texto_pdf=texto_pdf, consultante=consultante)}]
-    )
-    raw = response.content[0].text.strip()
-    # Clean potential markdown code blocks
-    if raw.startswith("```"):
-        raw = raw.split("```")[1]
-        if raw.startswith("json"):
-            raw = raw[4:]
-    return json.loads(raw.strip())
+    prompt = USER_INDIVIDUAL.format(texto_pdf=texto_pdf, consultante=consultante)
+    response = model.generate_content([SYSTEM_INDIVIDUAL, prompt])
+    raw = response.text.strip()
+    raw = raw.replace("```json", "").replace("```", "").strip()
+    return json.loads(raw)
+
 
 def interpretar_pareja(texto1: str, texto2: str, nombre1: str, nombre2: str, consultante: str) -> dict:
-    response = client.messages.create(
-        model=MODEL,
-        max_tokens=4000,
-        system=SYSTEM_PAREJA,
-        messages=[{"role": "user", "content": USER_PAREJA.format(
-            texto_pdf_1=texto1, texto_pdf_2=texto2,
-            nombre1=nombre1, nombre2=nombre2, consultante=consultante
-        )}]
+    prompt = USER_PAREJA.format(
+        texto_pdf_1=texto1, texto_pdf_2=texto2,
+        nombre1=nombre1, nombre2=nombre2, consultante=consultante
     )
-    raw = response.content[0].text.strip()
-    if raw.startswith("```"):
-        raw = raw.split("```")[1]
-        if raw.startswith("json"):
-            raw = raw[4:]
-    return json.loads(raw.strip())
+    response = model.generate_content([SYSTEM_PAREJA, prompt])
+    raw = response.text.strip()
+    raw = raw.replace("```json", "").replace("```", "").strip()
+    return json.loads(raw)
