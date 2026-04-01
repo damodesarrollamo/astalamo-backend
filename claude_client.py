@@ -1,9 +1,8 @@
-import google.generativeai as genai
 import os
 import json
+from groq import Groq
 
-genai.configure(api_key=os.environ.get("GEMINI_API_KEY", ""))
-model = genai.GenerativeModel("gemini-1.5-flash")
+client = Groq(api_key=os.environ.get("GROQ_API_KEY", ""))
 
 SYSTEM_INDIVIDUAL = """Sos AstralReader, un intérprete de cartas natales astrológicas.
 Recibís el texto extraído de un PDF de carta natal generado por losarcanos.com.
@@ -55,8 +54,16 @@ Generá el análisis con este formato JSON exacto (cada campo es un string con 3
 
 def interpretar_individual(texto_pdf: str, consultante: str) -> dict:
     prompt = USER_INDIVIDUAL.format(texto_pdf=texto_pdf, consultante=consultante)
-    response = model.generate_content([SYSTEM_INDIVIDUAL, prompt])
-    raw = response.text.strip()
+    response = client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        messages=[
+            {"role": "system", "content": SYSTEM_INDIVIDUAL},
+            {"role": "user", "content": prompt}
+        ],
+        temperature=0.7,
+        max_tokens=2000
+    )
+    raw = response.choices[0].message.content.strip()
     raw = raw.replace("```json", "").replace("```", "").strip()
     return json.loads(raw)
 
@@ -66,7 +73,15 @@ def interpretar_pareja(texto1: str, texto2: str, nombre1: str, nombre2: str, con
         texto_pdf_1=texto1, texto_pdf_2=texto2,
         nombre1=nombre1, nombre2=nombre2, consultante=consultante
     )
-    response = model.generate_content([SYSTEM_PAREJA, prompt])
-    raw = response.text.strip()
+    response = client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        messages=[
+            {"role": "system", "content": SYSTEM_PAREJA},
+            {"role": "user", "content": prompt}
+        ],
+        temperature=0.7,
+        max_tokens=2000
+    )
+    raw = response.choices[0].message.content.strip()
     raw = raw.replace("```json", "").replace("```", "").strip()
     return json.loads(raw)
